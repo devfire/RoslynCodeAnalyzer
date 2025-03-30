@@ -24,9 +24,7 @@ public class CodeStructureWalker : CSharpSyntaxWalker
         _semanticModel = semanticModel ?? throw new ArgumentNullException(nameof(semanticModel));
         _filePath = filePath;
     }
-    
-    // ... (GetResults, AddNode, AddEdge, GetLocation, GetSummaryComment remain the same) ...
-    
+    // --- Public Methods ---
      public (Dictionary<string, CodeNode> Nodes, List<CodeEdge> Edges) GetResults()
     {
         return (_nodes, _edges);
@@ -120,6 +118,91 @@ public class CodeStructureWalker : CSharpSyntaxWalker
         }
     }
 
+     public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
+    {
+        var symbol = _semanticModel.GetDeclaredSymbol(node);
+        if (symbol != null)
+        {
+            string id = symbol.ToDisplayString(FullyQualifiedFormat);
+            var location = GetLocation(node);
+            var comment = GetSummaryComment(node);
+            string codeSnippet = node.ToString(); 
+
+            // Properties don't have a separate "Signature" field in our model
+            var codeNode = new CodeNode(id, "Property", symbol.Name, location.FilePath, location.StartLine, location.EndLine, Comment: comment, CodeSnippet: codeSnippet); 
+            AddNode(codeNode);
+
+            // Visit accessor methods (get/set) if needed for deeper analysis later
+            base.VisitPropertyDeclaration(node); 
+        } else {
+            base.VisitPropertyDeclaration(node);
+        }
+    }
+
+    public override void VisitFieldDeclaration(FieldDeclarationSyntax node)
+    {
+        // A single FieldDeclaration can declare multiple variables (e.g., public int x, y;)
+        // We need to create a node for each variable declarator.
+        var comment = GetSummaryComment(node); // Comment applies to the whole declaration
+        string fullSnippet = node.ToString(); // Snippet for the whole declaration line
+
+        foreach (VariableDeclaratorSyntax variableDeclarator in node.Declaration.Variables)
+        {
+            var symbol = _semanticModel.GetDeclaredSymbol(variableDeclarator);
+            if (symbol != null && symbol is IFieldSymbol fieldSymbol) // Ensure it's a field symbol
+            {
+                 string id = fieldSymbol.ToDisplayString(FullyQualifiedFormat);
+                 // Use the location of the specific variable declarator if possible,
+                 // otherwise fallback to the whole declaration's location.
+                 var location = GetLocation(variableDeclarator); 
+                 
+                 // Use the variable name, associate comment/snippet from parent declaration
+                 var codeNode = new CodeNode(id, "Field", fieldSymbol.Name, location.FilePath, location.StartLine, location.EndLine, Comment: comment, CodeSnippet: fullSnippet);
+                 AddNode(codeNode);
+            }
+        }
+        // Don't call base.VisitFieldDeclaration(node) unless you want to analyze initializers etc.
+    }
+
+    public override void VisitEnumDeclaration(EnumDeclarationSyntax node)
+    {
+        var symbol = _semanticModel.GetDeclaredSymbol(node);
+        if (symbol != null)
+        {
+             string id = symbol.ToDisplayString(FullyQualifiedFormat);
+             var location = GetLocation(node);
+             var comment = GetSummaryComment(node);
+             string codeSnippet = node.ToString();
+
+             var codeNode = new CodeNode(id, "Enum", symbol.Name, location.FilePath, location.StartLine, location.EndLine, Comment: comment, CodeSnippet: codeSnippet);
+             AddNode(codeNode);
+
+             _containerIdStack.Push(id); // Push Enum onto stack for containing members
+             base.VisitEnumDeclaration(node); // Visit Enum Members
+             _containerIdStack.Pop(); // Pop Enum from stack
+        } else {
+             base.VisitEnumDeclaration(node);
+        }
+    }
+
+    public override void VisitEnumMemberDeclaration(EnumMemberDeclarationSyntax node)
+    {
+        var symbol = _semanticModel.GetDeclaredSymbol(node);
+        if (symbol != null) // Enum members are field symbols
+        {
+            string id = symbol.ToDisplayString(FullyQualifiedFormat);
+            var location = GetLocation(node);
+            var comment = GetSummaryComment(node); // Get comment specific to the member
+            string codeSnippet = node.ToString();
+
+            var codeNode = new CodeNode(id, "EnumMember", symbol.Name, location.FilePath, location.StartLine, location.EndLine, Comment: comment, CodeSnippet: codeSnippet);
+            AddNode(codeNode);
+
+            // Don't call base.VisitEnumMemberDeclaration unless analyzing attributes etc.
+        } else {
+             base.VisitEnumMemberDeclaration(node);
+        }
+    }
 
     public override void VisitClassDeclaration(ClassDeclarationSyntax node)
     {
