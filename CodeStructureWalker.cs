@@ -13,10 +13,10 @@ public class CodeStructureWalker : CSharpSyntaxWalker
 {
     // ... (Existing fields and constructor remain the same) ...
     private readonly SemanticModel _semanticModel;
-    private readonly Dictionary<string, CodeNode> _nodes = new(); 
+    private readonly Dictionary<string, CodeNode> _nodes = new();
     private readonly List<CodeEdge> _edges = new();
     private readonly string _filePath;
-    private readonly Stack<string> _containerIdStack = new(); 
+    private readonly Stack<string> _containerIdStack = new();
     private static readonly SymbolDisplayFormat FullyQualifiedFormat = new(/* ... existing format options ... */);
 
     public CodeStructureWalker(SemanticModel semanticModel, string filePath)
@@ -25,35 +25,35 @@ public class CodeStructureWalker : CSharpSyntaxWalker
         _filePath = filePath;
     }
     // --- Public Methods ---
-     public (Dictionary<string, CodeNode> Nodes, List<CodeEdge> Edges) GetResults()
+    public (Dictionary<string, CodeNode> Nodes, List<CodeEdge> Edges) GetResults()
     {
         return (_nodes, _edges);
     }
-    
+
     private void AddNode(CodeNode node)
     {
-        _nodes.TryAdd(node.Id, node); 
+        _nodes.TryAdd(node.Id, node);
         if (_containerIdStack.TryPeek(out var containerId))
         {
-             AddEdge(new CodeEdge(containerId, node.Id, "CONTAINS"));
+            AddEdge(new CodeEdge(containerId, node.Id, "CONTAINS"));
         }
     }
-     
+
     private void AddEdge(CodeEdge edge)
     {
         _edges.Add(edge);
     }
-    
-     private LocationInfo GetLocation(SyntaxNode node)
+
+    private LocationInfo GetLocation(SyntaxNode node)
     {
-         var lineSpan = node.GetLocation().GetLineSpan();
-         return new LocationInfo(
-             _filePath, 
-             lineSpan.StartLinePosition.Line + 1, 
-             lineSpan.EndLinePosition.Line + 1
-         );
+        var lineSpan = node.GetLocation().GetLineSpan();
+        return new LocationInfo(
+            _filePath,
+            lineSpan.StartLinePosition.Line + 1,
+            lineSpan.EndLinePosition.Line + 1
+        );
     }
-    
+
     private string? GetSummaryComment(SyntaxNode node)
     {
         var xmlTrivia = node.GetLeadingTrivia()
@@ -66,13 +66,13 @@ public class CodeStructureWalker : CSharpSyntaxWalker
             try
             {
                 var xmlContent = xmlTrivia.Content.ToString();
-                 var xmlDoc = XDocument.Parse("<root>" + xmlContent + "</root>", LoadOptions.PreserveWhitespace); 
-                 return xmlDoc.Descendants("summary").FirstOrDefault()?.Value.Trim();
+                var xmlDoc = XDocument.Parse("<root>" + xmlContent + "</root>", LoadOptions.PreserveWhitespace);
+                return xmlDoc.Descendants("summary").FirstOrDefault()?.Value.Trim();
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
-                 Console.Error.WriteLine($"Warning: Failed to parse XML comment for node near line {GetLocation(node).StartLine}. Error: {ex.Message}");
-                 return null; 
+                Console.Error.WriteLine($"Warning: Failed to parse XML comment for node near line {GetLocation(node).StartLine}. Error: {ex.Message}");
+                return null;
             }
         }
         return null;
@@ -88,37 +88,41 @@ public class CodeStructureWalker : CSharpSyntaxWalker
             string id = symbol.ToDisplayString(FullyQualifiedFormat);
             var location = GetLocation(node);
             // Typically don't need full code snippet for namespace declaration itself
-            var codeNode = new CodeNode(id, "Namespace", symbol.Name, location.FilePath, location.StartLine, location.EndLine); 
+            var codeNode = new CodeNode(id, "Namespace", symbol.Name, location.FilePath, location.StartLine, location.EndLine);
             AddNode(codeNode);
 
-            _containerIdStack.Push(id); 
-            base.VisitNamespaceDeclaration(node); 
-            _containerIdStack.Pop(); 
-        } else {
-             base.VisitNamespaceDeclaration(node);
+            _containerIdStack.Push(id);
+            base.VisitNamespaceDeclaration(node);
+            _containerIdStack.Pop();
+        }
+        else
+        {
+            base.VisitNamespaceDeclaration(node);
         }
     }
-     
+
     public override void VisitFileScopedNamespaceDeclaration(FileScopedNamespaceDeclarationSyntax node)
     {
         var symbol = _semanticModel.GetDeclaredSymbol(node);
         if (symbol != null)
         {
             string id = symbol.ToDisplayString(FullyQualifiedFormat);
-            var location = GetLocation(node); 
-             // Typically don't need full code snippet for namespace declaration itself
+            var location = GetLocation(node);
+            // Typically don't need full code snippet for namespace declaration itself
             var codeNode = new CodeNode(id, "Namespace", symbol.Name, location.FilePath, location.StartLine, location.EndLine);
             AddNode(codeNode);
 
-            _containerIdStack.Push(id); 
-            base.VisitFileScopedNamespaceDeclaration(node); 
-            _containerIdStack.Pop(); 
-        } else {
-             base.VisitFileScopedNamespaceDeclaration(node);
+            _containerIdStack.Push(id);
+            base.VisitFileScopedNamespaceDeclaration(node);
+            _containerIdStack.Pop();
+        }
+        else
+        {
+            base.VisitFileScopedNamespaceDeclaration(node);
         }
     }
 
-     public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
+    public override void VisitPropertyDeclaration(PropertyDeclarationSyntax node)
     {
         var symbol = _semanticModel.GetDeclaredSymbol(node);
         if (symbol != null)
@@ -126,15 +130,17 @@ public class CodeStructureWalker : CSharpSyntaxWalker
             string id = symbol.ToDisplayString(FullyQualifiedFormat);
             var location = GetLocation(node);
             var comment = GetSummaryComment(node);
-            string codeSnippet = node.ToString(); 
+            string codeSnippet = node.ToString();
 
             // Properties don't have a separate "Signature" field in our model
-            var codeNode = new CodeNode(id, "Property", symbol.Name, location.FilePath, location.StartLine, location.EndLine, Comment: comment, CodeSnippet: codeSnippet); 
+            var codeNode = new CodeNode(id, "Property", symbol.Name, location.FilePath, location.StartLine, location.EndLine, Comment: comment, CodeSnippet: codeSnippet);
             AddNode(codeNode);
 
             // Visit accessor methods (get/set) if needed for deeper analysis later
-            base.VisitPropertyDeclaration(node); 
-        } else {
+            base.VisitPropertyDeclaration(node);
+        }
+        else
+        {
             base.VisitPropertyDeclaration(node);
         }
     }
@@ -151,14 +157,14 @@ public class CodeStructureWalker : CSharpSyntaxWalker
             var symbol = _semanticModel.GetDeclaredSymbol(variableDeclarator);
             if (symbol != null && symbol is IFieldSymbol fieldSymbol) // Ensure it's a field symbol
             {
-                 string id = fieldSymbol.ToDisplayString(FullyQualifiedFormat);
-                 // Use the location of the specific variable declarator if possible,
-                 // otherwise fallback to the whole declaration's location.
-                 var location = GetLocation(variableDeclarator); 
-                 
-                 // Use the variable name, associate comment/snippet from parent declaration
-                 var codeNode = new CodeNode(id, "Field", fieldSymbol.Name, location.FilePath, location.StartLine, location.EndLine, Comment: comment, CodeSnippet: fullSnippet);
-                 AddNode(codeNode);
+                string id = fieldSymbol.ToDisplayString(FullyQualifiedFormat);
+                // Use the location of the specific variable declarator if possible,
+                // otherwise fallback to the whole declaration's location.
+                var location = GetLocation(variableDeclarator);
+
+                // Use the variable name, associate comment/snippet from parent declaration
+                var codeNode = new CodeNode(id, "Field", fieldSymbol.Name, location.FilePath, location.StartLine, location.EndLine, Comment: comment, CodeSnippet: fullSnippet);
+                AddNode(codeNode);
             }
         }
         // Don't call base.VisitFieldDeclaration(node) unless you want to analyze initializers etc.
@@ -169,19 +175,21 @@ public class CodeStructureWalker : CSharpSyntaxWalker
         var symbol = _semanticModel.GetDeclaredSymbol(node);
         if (symbol != null)
         {
-             string id = symbol.ToDisplayString(FullyQualifiedFormat);
-             var location = GetLocation(node);
-             var comment = GetSummaryComment(node);
-             string codeSnippet = node.ToString();
+            string id = symbol.ToDisplayString(FullyQualifiedFormat);
+            var location = GetLocation(node);
+            var comment = GetSummaryComment(node);
+            string codeSnippet = node.ToString();
 
-             var codeNode = new CodeNode(id, "Enum", symbol.Name, location.FilePath, location.StartLine, location.EndLine, Comment: comment, CodeSnippet: codeSnippet);
-             AddNode(codeNode);
+            var codeNode = new CodeNode(id, "Enum", symbol.Name, location.FilePath, location.StartLine, location.EndLine, Comment: comment, CodeSnippet: codeSnippet);
+            AddNode(codeNode);
 
-             _containerIdStack.Push(id); // Push Enum onto stack for containing members
-             base.VisitEnumDeclaration(node); // Visit Enum Members
-             _containerIdStack.Pop(); // Pop Enum from stack
-        } else {
-             base.VisitEnumDeclaration(node);
+            _containerIdStack.Push(id); // Push Enum onto stack for containing members
+            base.VisitEnumDeclaration(node); // Visit Enum Members
+            _containerIdStack.Pop(); // Pop Enum from stack
+        }
+        else
+        {
+            base.VisitEnumDeclaration(node);
         }
     }
 
@@ -199,8 +207,10 @@ public class CodeStructureWalker : CSharpSyntaxWalker
             AddNode(codeNode);
 
             // Don't call base.VisitEnumMemberDeclaration unless analyzing attributes etc.
-        } else {
-             base.VisitEnumMemberDeclaration(node);
+        }
+        else
+        {
+            base.VisitEnumMemberDeclaration(node);
         }
     }
 
@@ -215,56 +225,60 @@ public class CodeStructureWalker : CSharpSyntaxWalker
             string codeSnippet = node.ToString(); // <<< GET THE CODE SNIPPET
 
             // <<< PASS SNIPPET TO CodeNode CONSTRUCTOR
-            var codeNode = new CodeNode(id, "Class", symbol.Name, location.FilePath, location.StartLine, location.EndLine, Comment: comment, CodeSnippet: codeSnippet); 
+            var codeNode = new CodeNode(id, "Class", symbol.Name, location.FilePath, location.StartLine, location.EndLine, Comment: comment, CodeSnippet: codeSnippet);
             AddNode(codeNode);
 
-             // Handle Inheritance (remains the same)
-             if (symbol.BaseType != null && symbol.BaseType.SpecialType != SpecialType.System_Object) 
-             {
-                 string baseTypeId = symbol.BaseType.ToDisplayString(FullyQualifiedFormat);
-                 AddEdge(new CodeEdge(id, baseTypeId, "INHERITS_FROM"));
-             }
-             foreach (var iface in symbol.Interfaces)
-             {
-                 string interfaceId = iface.ToDisplayString(FullyQualifiedFormat);
-                 AddEdge(new CodeEdge(id, interfaceId, "IMPLEMENTS"));
-             }
+            // Handle Inheritance (remains the same)
+            if (symbol.BaseType != null && symbol.BaseType.SpecialType != SpecialType.System_Object)
+            {
+                string baseTypeId = symbol.BaseType.ToDisplayString(FullyQualifiedFormat);
+                AddEdge(new CodeEdge(id, baseTypeId, "INHERITS_FROM"));
+            }
+            foreach (var iface in symbol.Interfaces)
+            {
+                string interfaceId = iface.ToDisplayString(FullyQualifiedFormat);
+                AddEdge(new CodeEdge(id, interfaceId, "IMPLEMENTS"));
+            }
 
-            _containerIdStack.Push(id); 
-            base.VisitClassDeclaration(node); 
-            _containerIdStack.Pop(); 
-        } else {
-             base.VisitClassDeclaration(node);
+            _containerIdStack.Push(id);
+            base.VisitClassDeclaration(node);
+            _containerIdStack.Pop();
+        }
+        else
+        {
+            base.VisitClassDeclaration(node);
         }
     }
 
-     public override void VisitInterfaceDeclaration(InterfaceDeclarationSyntax node)
+    public override void VisitInterfaceDeclaration(InterfaceDeclarationSyntax node)
     {
-         var symbol = _semanticModel.GetDeclaredSymbol(node);
-         if (symbol != null)
-         {
-             string id = symbol.ToDisplayString(FullyQualifiedFormat);
-             var location = GetLocation(node);
-             var comment = GetSummaryComment(node);
-             string codeSnippet = node.ToString(); // <<< GET THE CODE SNIPPET
+        var symbol = _semanticModel.GetDeclaredSymbol(node);
+        if (symbol != null)
+        {
+            string id = symbol.ToDisplayString(FullyQualifiedFormat);
+            var location = GetLocation(node);
+            var comment = GetSummaryComment(node);
+            string codeSnippet = node.ToString(); // <<< GET THE CODE SNIPPET
 
-             // <<< PASS SNIPPET TO CodeNode CONSTRUCTOR
-             var codeNode = new CodeNode(id, "Interface", symbol.Name, location.FilePath, location.StartLine, location.EndLine, Comment: comment, CodeSnippet: codeSnippet); 
-             AddNode(codeNode);
+            // <<< PASS SNIPPET TO CodeNode CONSTRUCTOR
+            var codeNode = new CodeNode(id, "Interface", symbol.Name, location.FilePath, location.StartLine, location.EndLine, Comment: comment, CodeSnippet: codeSnippet);
+            AddNode(codeNode);
 
-             // Handle Interface Inheritance (remains the same)
-              foreach (var iface in symbol.Interfaces) 
-             {
-                 string baseInterfaceId = iface.ToDisplayString(FullyQualifiedFormat);
-                 AddEdge(new CodeEdge(id, baseInterfaceId, "INHERITS_FROM")); 
-             }
+            // Handle Interface Inheritance (remains the same)
+            foreach (var iface in symbol.Interfaces)
+            {
+                string baseInterfaceId = iface.ToDisplayString(FullyQualifiedFormat);
+                AddEdge(new CodeEdge(id, baseInterfaceId, "INHERITS_FROM"));
+            }
 
-             _containerIdStack.Push(id); 
-             base.VisitInterfaceDeclaration(node); 
-             _containerIdStack.Pop();
-         } else {
-             base.VisitInterfaceDeclaration(node);
-         }
+            _containerIdStack.Push(id);
+            base.VisitInterfaceDeclaration(node);
+            _containerIdStack.Pop();
+        }
+        else
+        {
+            base.VisitInterfaceDeclaration(node);
+        }
     }
 
 
@@ -278,17 +292,19 @@ public class CodeStructureWalker : CSharpSyntaxWalker
             var comment = GetSummaryComment(node);
             var signature = symbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat
                 .WithMemberOptions(SymbolDisplayMemberOptions.IncludeParameters)
-                .WithGenericsOptions(SymbolDisplayGenericsOptions.IncludeTypeParameters) 
+                .WithGenericsOptions(SymbolDisplayGenericsOptions.IncludeTypeParameters)
                 .WithParameterOptions(SymbolDisplayParameterOptions.IncludeType | SymbolDisplayParameterOptions.IncludeName | SymbolDisplayParameterOptions.IncludeParamsRefOut)
-                ); 
+                );
             string codeSnippet = node.ToString(); // <<< GET THE CODE SNIPPET
 
             // <<< PASS SNIPPET TO CodeNode CONSTRUCTOR
-            var codeNode = new CodeNode(id, "Method", symbol.Name, location.FilePath, location.StartLine, location.EndLine, Comment: comment, Signature: signature, CodeSnippet: codeSnippet); 
+            var codeNode = new CodeNode(id, "Method", symbol.Name, location.FilePath, location.StartLine, location.EndLine, Comment: comment, Signature: signature, CodeSnippet: codeSnippet);
             AddNode(codeNode);
 
             base.VisitMethodDeclaration(node); // Visit method body (e.g., for future call analysis)
-        } else {
+        }
+        else
+        {
             base.VisitMethodDeclaration(node);
         }
     }

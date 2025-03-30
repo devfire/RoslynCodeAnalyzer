@@ -27,8 +27,8 @@ class Program
         string projectOrSolutionPath = args[0];
         if (!File.Exists(projectOrSolutionPath) && !Directory.Exists(Path.GetDirectoryName(projectOrSolutionPath))) // Basic check
         {
-             Console.Error.WriteLine($"Error: Path not found - {projectOrSolutionPath}");
-             return;
+            Console.Error.WriteLine($"Error: Path not found - {projectOrSolutionPath}");
+            return;
         }
 
         var stopwatch = Stopwatch.StartNew();
@@ -55,14 +55,14 @@ class Program
             }
             else
             {
-                 Console.Error.WriteLine("Error: Invalid file type. Please provide a .sln or .csproj file.");
-                 return;
+                Console.Error.WriteLine("Error: Invalid file type. Please provide a .sln or .csproj file.");
+                return;
             }
 
             if (solution == null)
             {
-                 Console.Error.WriteLine("Error: Could not load solution or project.");
-                 return;
+                Console.Error.WriteLine("Error: Could not load solution or project.");
+                return;
             }
 
 
@@ -74,54 +74,54 @@ class Program
             // Process projects in parallel for potentially faster analysis
             var projectTasks = solution.Projects.Select(async proj =>
             {
-                 Console.Error.WriteLine($"  Analyzing project: {proj.Name}");
-                 var nodesInProject = new Dictionary<string, CodeNode>();
-                 var edgesInProject = new List<CodeEdge>();
-                 var compilation = await proj.GetCompilationAsync(); // Get compilation for semantic info
+                Console.Error.WriteLine($"  Analyzing project: {proj.Name}");
+                var nodesInProject = new Dictionary<string, CodeNode>();
+                var edgesInProject = new List<CodeEdge>();
+                var compilation = await proj.GetCompilationAsync(); // Get compilation for semantic info
 
-                 if (compilation == null)
-                 {
-                      Console.Error.WriteLine($"Warning: Could not get compilation for project {proj.Name}. Skipping.");
-                      return (nodesInProject, edgesInProject); // Return empty results for this project
-                 }
+                if (compilation == null)
+                {
+                    Console.Error.WriteLine($"Warning: Could not get compilation for project {proj.Name}. Skipping.");
+                    return (nodesInProject, edgesInProject); // Return empty results for this project
+                }
 
-                 foreach (var document in proj.Documents)
-                 {
-                     // Only process C# files that are part of the compilation
-                      if (document.SourceCodeKind != SourceCodeKind.Regular || !document.SupportsSyntaxTree || !document.SupportsSemanticModel) continue;
+                foreach (var document in proj.Documents)
+                {
+                    // Only process C# files that are part of the compilation
+                    if (document.SourceCodeKind != SourceCodeKind.Regular || !document.SupportsSyntaxTree || !document.SupportsSemanticModel) continue;
 
-                     try
-                     {
-                          var syntaxTree = await document.GetSyntaxTreeAsync();
-                          var semanticModel = await document.GetSemanticModelAsync();
+                    try
+                    {
+                        var syntaxTree = await document.GetSyntaxTreeAsync();
+                        var semanticModel = await document.GetSemanticModelAsync();
 
-                          if (syntaxTree != null && semanticModel != null)
-                          {
-                              var walker = new CodeStructureWalker(semanticModel, document.FilePath ?? "unknown");
-                              walker.Visit(syntaxTree.GetRoot());
-                              var (nodes, edges) = walker.GetResults();
-                              
-                              // Merge results from this document
-                              foreach(var kvp in nodes) { nodesInProject.TryAdd(kvp.Key, kvp.Value); } // Add new nodes found in this doc
-                              edgesInProject.AddRange(edges);
-                          }
-                     }
-                     catch (Exception ex)
-                     {
-                          Console.Error.WriteLine($"Error processing document {document.Name} in project {proj.Name}: {ex.Message}");
-                           // Optionally continue processing other documents
-                     }
-                 }
-                 return (nodesInProject, edgesInProject);
+                        if (syntaxTree != null && semanticModel != null)
+                        {
+                            var walker = new CodeStructureWalker(semanticModel, document.FilePath ?? "unknown");
+                            walker.Visit(syntaxTree.GetRoot());
+                            var (nodes, edges) = walker.GetResults();
+
+                            // Merge results from this document
+                            foreach (var kvp in nodes) { nodesInProject.TryAdd(kvp.Key, kvp.Value); } // Add new nodes found in this doc
+                            edgesInProject.AddRange(edges);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine($"Error processing document {document.Name} in project {proj.Name}: {ex.Message}");
+                        // Optionally continue processing other documents
+                    }
+                }
+                return (nodesInProject, edgesInProject);
 
             });
 
-             // Await all project analyses and aggregate results
+            // Await all project analyses and aggregate results
             var results = await Task.WhenAll(projectTasks);
-            foreach(var (projectNodes, projectEdges) in results) 
+            foreach (var (projectNodes, projectEdges) in results)
             {
-                 foreach(var kvp in projectNodes) { allNodes.TryAdd(kvp.Key, kvp.Value); } // Merge nodes globally
-                 allEdges.AddRange(projectEdges); // Add all edges
+                foreach (var kvp in projectNodes) { allNodes.TryAdd(kvp.Key, kvp.Value); } // Merge nodes globally
+                allEdges.AddRange(projectEdges); // Add all edges
             }
 
 
@@ -150,7 +150,7 @@ class Program
         }
         finally
         {
-             workspace.Dispose(); // Dispose the workspace
+            workspace.Dispose(); // Dispose the workspace
         }
     }
 }
