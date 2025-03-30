@@ -17,15 +17,16 @@ public record CodeNode(
     string FilePath,
     int StartLine,
     int EndLine,
-    string? Comment = null,  // Optional: XML doc comment summary
-    string? Signature = null // Optional: Method signature
+    string? Comment = null,     // Optional: XML doc comment summary
+    string? Signature = null,   // Optional: Method signature
+    string? CodeSnippet = null // <<< ADD OR ENSURE THIS LINE EXISTS
 );
 
 // Represents a relationship between two nodes
 public record CodeEdge(
     string SourceId,   // ID of the source node
     string TargetId,   // ID of the target node
-    string Type        // e.g., "CONTAINS", "INHERITS_FROM", "IMPLEMENTS", "CALLS" 
+    string Type        // e.g., "CONTAINS", "INHERITS_FROM", "IMPLEMENTS", "CALLS"
 );
 
 // Helper to get location info
