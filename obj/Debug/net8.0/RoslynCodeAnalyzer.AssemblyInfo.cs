@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("RoslynCodeAnalyzer")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a06fdb96a3afc5f1ac50e182f7a0983caf50087c")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+50d7604c948e75e190d40d45c51b7c69ad3490fa")]
 [assembly: System.Reflection.AssemblyProductAttribute("RoslynCodeAnalyzer")]
 [assembly: System.Reflection.AssemblyTitleAttribute("RoslynCodeAnalyzer")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
