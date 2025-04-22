@@ -199,4 +199,4 @@ Contributions are welcome! Please follow standard fork-and-pull-request workflow
 
 ## License
 
-This project is licensed under the MIT License. See the `LICENSE` file for details (if one exists).
+This project is licensed under the MIT License. 
