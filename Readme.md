@@ -6,6 +6,8 @@ The Roslyn Code Analyzer is a powerful tool built using the .NET Roslyn compiler
 
 By parsing the syntax and leveraging semantic analysis, the tool extracts rich information including namespaces, types (classes, interfaces, enums, structs), members (methods, properties, fields), documentation comments, code snippets, and structural relationships like inheritance and containment.
 
+Primarily, it's meant to be used by https://github.com/devfire/lightrag-csharp for Neo4j upload but can be used with any graph database (AWS Neptune, etc.)
+
 ## Key Features
 
 *   **Roslyn-Powered Analysis:** Utilizes the official .NET Compiler Platform (Roslyn) for accurate syntax and semantic analysis of C# code.
